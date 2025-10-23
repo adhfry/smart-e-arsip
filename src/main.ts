@@ -41,14 +41,34 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration - SIMPLE like NaviGo API
-  // Allow frontend URLs + localhost for Swagger
+  // CORS configuration - Allow requests with and without origin
+  // Swagger UI doesn't send Origin header, so we need to handle that
   const allowedOrigins = isDevelopment
     ? [...frontendUrls, 'http://localhost:3006', 'http://127.0.0.1:3006']
     : frontendUrls;
 
   app.enableCors({
-    origin: allowedOrigins,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (Swagger UI, Postman, curl)
+      if (!origin) {
+        return callback(null, true);
+      }
+      
+      // Check if origin is in allowed list
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      // In development, be more permissive
+      if (isDevelopment) {
+        console.log('⚠️  CORS allowing origin in dev mode:', origin);
+        return callback(null, true);
+      }
+      
+      // In production, block unknown origins
+      console.warn('❌ CORS blocked origin:', origin);
+      return callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
   });
 
