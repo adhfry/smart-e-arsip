@@ -40,7 +40,7 @@ export class UserController {
 
   @Post()
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: '➕ Membuat user baru',
     description: `
@@ -170,7 +170,7 @@ export class UserController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: '📋 Mendapatkan semua user dengan filter',
     description: `
@@ -263,7 +263,7 @@ export class UserController {
 
   @Get('stats')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: '📊 Statistik User',
     description: `
@@ -311,7 +311,7 @@ export class UserController {
 
   @Get('search')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: '🔍 Search user',
     description: `
@@ -354,7 +354,7 @@ export class UserController {
 
   @Get('by-role/:role')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: '🎭 Mendapatkan user berdasarkan role',
     description: `
@@ -395,7 +395,7 @@ export class UserController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: '🔍 Mendapatkan detail user berdasarkan ID',
     description: `
@@ -458,7 +458,7 @@ export class UserController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: '✏️ Mengupdate data user',
     description: `
@@ -560,7 +560,7 @@ export class UserController {
 
   @Patch(':id/change-password')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ 
     summary: '🔐 Mengubah password user',
@@ -638,7 +638,7 @@ export class UserController {
 
   @Patch(':id/toggle-active')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({ 
     summary: '🔄 Toggle status aktif user',
     description: `
@@ -700,7 +700,7 @@ export class UserController {
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ 
     summary: '🗑️ Menghapus user (Permanent Delete)',

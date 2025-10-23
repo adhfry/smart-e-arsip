@@ -104,6 +104,20 @@ export class AuthService {
     return this.generateTokens(user);
   }
 
+  /**
+   * 🔐 Login dengan Redis Caching
+   * 
+   * Cache Strategy:
+   * 1. Cache user credentials untuk mempercepat login berikutnya (30 menit)
+   * 2. Cache refresh token (7 hari)
+   * 3. Cache session info (7 hari)
+   * 
+   * Flow:
+   * 1. Cek cache untuk user credentials
+   * 2. Jika cache hit → langsung verify password (FAST!)
+   * 3. Jika cache miss → fetch dari database → cache untuk next time
+   * 4. Generate tokens dan simpan di Redis
+   */
   async login(username: string, password: string): Promise<LoginResponse> {
     // ⚡ Try to get user from cache first
     let user: any = await this.cacheManager.get(
@@ -125,9 +139,9 @@ export class AuthService {
         this.USER_CREDENTIALS_TTL,
       );
       
-      this.logger.debug(`User credentials cached: ${username}`);
+      this.logger.debug(`💾 User credentials cached: ${username}`);
     } else {
-      this.logger.debug(`⚡ User credentials from cache: ${username}`);
+      this.logger.debug(`⚡ CACHE HIT - User credentials from Redis: ${username}`);
     }
 
     // Check if user is active
@@ -245,6 +259,15 @@ export class AuthService {
     }
   }
 
+  /**
+   * 🎫 Generate JWT Tokens dan simpan di Redis
+   * 
+   * Redis Keys:
+   * - refresh_token:{userId} → Refresh token untuk renewal
+   * - session:{userId} → Session info untuk monitoring
+   * 
+   * TTL: 7 hari untuk kedua keys
+   */
   private async generateTokens(user: any): Promise<LoginResponse> {
     const payload: JwtPayload = {
       sub: user.id,
@@ -262,14 +285,14 @@ export class AuthService {
       expiresIn: this.REFRESH_TOKEN_EXPIRY,
     });
 
-    // Store refresh token in Redis
+    // 💾 Store refresh token in Redis
     await this.cacheManager.set(
       `${this.REFRESH_TOKEN_PREFIX}${user.id}`,
       refreshToken,
       this.REFRESH_TOKEN_TTL,
     );
 
-    // Store session info
+    // 💾 Store session info in Redis
     await this.cacheManager.set(
       `${this.SESSION_PREFIX}${user.id}`,
       {
@@ -281,7 +304,7 @@ export class AuthService {
       this.REFRESH_TOKEN_TTL,
     );
 
-    this.logger.debug(`Tokens generated for user: ${user.username}`);
+    this.logger.debug(`🎫 Tokens generated & cached in Redis for user: ${user.username}`);
 
     return {
       access_token: accessToken,

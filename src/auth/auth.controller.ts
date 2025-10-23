@@ -227,7 +227,7 @@ Check logs untuk melihat login activity dan cache behavior.
 
   @Post('logout')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: '🚪 Logout user',
@@ -341,7 +341,7 @@ Check logs untuk tracking token refresh frequency.
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: '👤 Get current user info',
     description: `
@@ -396,7 +396,7 @@ Sama dengan user object dari GET /users/:id
 
   @Get('session')
   @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT-auth')
+  @ApiBearerAuth('access-token')
   @ApiOperation({
     summary: '🕐 Get active session info',
     description: `
