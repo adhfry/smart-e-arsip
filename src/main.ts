@@ -36,7 +36,7 @@ async function bootstrap() {
       },
     }),
   );
-
+// tes disini
   app.use(
     compression({
       filter: (req: any, res: any) => {
