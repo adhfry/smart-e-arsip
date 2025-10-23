@@ -24,29 +24,32 @@ async function bootstrap() {
 
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const isDevelopment = nodeEnv === 'development';
+  const appUrl = configService.get<string>('APP_URL') || `http://localhost:${port}`;
 
-  // Helmet configuration - more permissive for development
-  if (isDevelopment) {
-    app.use(
-      helmet({
-        contentSecurityPolicy: false, // Disable CSP in development for easier debugging
-      }),
-    );
-  } else {
-    app.use(
-      helmet({
-        contentSecurityPolicy: {
-          directives: {
-            defaultSrc: ["'self'"],
-            styleSrc: ["'self'", "'unsafe-inline'"],
-            scriptSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", 'data:', 'https:'],
-            connectSrc: ["'self'", ...frontendUrls],
-          },
+  // Helmet configuration - permissive for Swagger in all environments
+  // For production Swagger, we need to allow connectSrc to API itself
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Swagger needs eval
+          imgSrc: ["'self'", 'data:', 'https:'],
+          // Allow connections to API itself, frontend URLs, and common origins
+          connectSrc: [
+            "'self'", 
+            appUrl,
+            `http://localhost:${port}`,
+            `http://127.0.0.1:${port}`,
+            `http://[::1]:${port}`,
+            ...frontendUrls,
+            'https://www.google-analytics.com', // For analytics if needed
+          ],
         },
-      }),
-    );
-  }
+      },
+    }),
+  );
 
   app.use(
     compression({
