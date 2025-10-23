@@ -22,21 +22,32 @@ async function bootstrap() {
     configService.get<string>('FRONTEND_URLS') || 'http://localhost:3003'
   ).split(',');
 
-  // Helmet configuration - disable CSP for Swagger UI
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-          imgSrc: ["'self'", 'data:', 'https:'],
-          connectSrc: ["'self'", ...frontendUrls, 'http://localhost:3006'],
+  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
+  const isDevelopment = nodeEnv === 'development';
+
+  // Helmet configuration - more permissive for development
+  if (isDevelopment) {
+    app.use(
+      helmet({
+        contentSecurityPolicy: false, // Disable CSP in development for easier debugging
+      }),
+    );
+  } else {
+    app.use(
+      helmet({
+        contentSecurityPolicy: {
+          directives: {
+            defaultSrc: ["'self'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+            connectSrc: ["'self'", ...frontendUrls],
+          },
         },
-      },
-    }),
-  );
-// tes disini
+      }),
+    );
+  }
+
   app.use(
     compression({
       filter: (req: any, res: any) => {
@@ -49,9 +60,25 @@ async function bootstrap() {
     }),
   );
 
+  // CORS configuration - allow Swagger UI and frontend
+  const allowedOrigins = isDevelopment 
+    ? [...frontendUrls, 'http://localhost:3006', 'http://[::1]:3006', 'http://127.0.0.1:3006']
+    : frontendUrls;
+
   app.enableCors({
-    origin: frontendUrls,
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like Swagger UI, mobile apps, curl)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   });
 
   app.use(cookieParser());
