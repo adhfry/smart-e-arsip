@@ -28,28 +28,7 @@ async function bootstrap() {
 
   // Helmet configuration - permissive for Swagger in all environments
   // For production Swagger, we need to allow connectSrc to API itself
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Swagger needs eval
-          imgSrc: ["'self'", 'data:', 'https:'],
-          // Allow connections to API itself, frontend URLs, and common origins
-          connectSrc: [
-            "'self'", 
-            appUrl,
-            `http://localhost:${port}`,
-            `http://127.0.0.1:${port}`,
-            `http://[::1]:${port}`,
-            ...frontendUrls,
-            'https://www.google-analytics.com', // For analytics if needed
-          ],
-        },
-      },
-    }),
-  );
+  app.use(helmet());
 
   app.use(
     compression({
