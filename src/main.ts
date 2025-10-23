@@ -41,49 +41,15 @@ async function bootstrap() {
     }),
   );
 
-  // CORS configuration - very permissive to allow Swagger UI to work
-  // Allow all localhost variants and frontend URLs
-  const allowedOrigins = [
-    ...frontendUrls,
-    'http://localhost:3006',
-    'http://127.0.0.1:3006',
-    'http://[::1]:3006',
-    // Allow with any port for development flexibility
-    /^http:\/\/localhost(:\d+)?$/,
-    /^http:\/\/127\.0\.0\.1(:\d+)?$/,
-    /^http:\/\/\[::1\](:\d+)?$/,
-  ];
+  // CORS configuration - SIMPLE like NaviGo API
+  // Allow frontend URLs + localhost for Swagger
+  const allowedOrigins = isDevelopment
+    ? [...frontendUrls, 'http://localhost:3006', 'http://127.0.0.1:3006']
+    : frontendUrls;
 
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (Swagger UI, mobile apps, curl, Postman)
-      if (!origin) {
-        return callback(null, true);
-      }
-      
-      // Check if origin matches any allowed pattern
-      const isAllowed = allowedOrigins.some(allowed => {
-        if (typeof allowed === 'string') {
-          return origin === allowed || origin.startsWith(allowed);
-        }
-        if (allowed instanceof RegExp) {
-          return allowed.test(origin);
-        }
-        return false;
-      });
-      
-      if (isAllowed) {
-        callback(null, true);
-      } else {
-        console.warn(`⚠️  CORS blocked origin: ${origin}`);
-        callback(null, true); // Allow anyway - remove this in strict production
-      }
-    },
+    origin: allowedOrigins,
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
-    exposedHeaders: ['X-Total-Count', 'X-Cache-Status'],
-    maxAge: 86400, // 24 hours
   });
 
   app.use(cookieParser());
