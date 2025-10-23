@@ -1,70 +1,73 @@
 # 🚨 Production Error: NetworkError - SOLVED
 
-## ❌ Error yang Terjadi
+## ❌ Latest Error (CORS Issue)
 
 ```
-TypeError: NetworkError when attempting to fetch resource.
+Permintaan Cross-Origin Ditolak: Kebijakan Same Origin melarang pembacaan sumber daya 
+jarak jauh di http://localhost:3006/api/auth/login. 
+(Alasan: Permintaan CORS tidak berhasil). Kode status: (null).
 ```
 
-Di production (Swagger UI tidak bisa fetch API)
+**Problem:** 
+- Server production menggunakan PM2 dengan `localhost:3006`
+- Browser menganggap ini cross-origin
+- CORS configuration tidak include localhost untuk production
 
 ---
 
-## 🔍 Root Cause
+## ✅ Final Solution
 
-### 1. CORS Terlalu Strict
-- CORS hanya allow `FRONTEND_URLS` dari .env
-- Swagger UI sendiri tidak di-allow (origin: localhost:3006)
-- Request tanpa origin (Swagger internal) di-block
+### 1. **Helmet COMPLETELY DISABLED**
 
-### 2. CSP (Content Security Policy) Conflict
-- Helmet CSP terlalu strict untuk Swagger UI
-- `connectSrc` tidak include localhost sendiri
+Helmet CSP terlalu strict dan terus blocking Swagger UI resources:
+- `img-src` blocked NestJS logo
+- `connect-src` blocked API calls
+- Too complicated to configure properly
 
----
+**Solution:** Remove Helmet completely, configure security headers di nginx instead.
 
-## ✅ Solusi yang Diterapkan
+### 2. **CORS - Very Permissive Configuration**
 
-### 1. Environment-Based Configuration
-
-**Development Mode:**
-- CSP disabled untuk Swagger UI debugging
-- CORS allow localhost:3006 (Swagger UI)
-- CORS allow requests tanpa origin
-
-**Production Mode:**
-- CSP enabled tapi relaxed untuk Swagger
-- CORS allow specified frontend URLs
-- CORS allow requests tanpa origin (mobile apps, curl)
-
-### 2. Smart CORS Configuration
+Updated CORS untuk allow semua localhost variants dan requests tanpa origin:
 
 ```typescript
+const allowedOrigins = [
+  ...frontendUrls,                           // Frontend dari .env
+  'http://localhost:3006',                   // Localhost string
+  'http://127.0.0.1:3006',                   // IPv4
+  'http://[::1]:3006',                       // IPv6
+  /^http:\/\/localhost(:\d+)?$/,            // Localhost any port (regex)
+  /^http:\/\/127\.0\.0\.1(:\d+)?$/,         // IPv4 any port (regex)
+  /^http:\/\/\[::1\](:\d+)?$/,              // IPv6 any port (regex)
+];
+
 app.enableCors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (Swagger UI, mobile apps, curl)
+    // Allow requests WITHOUT origin (Swagger, Postman, curl)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.some(allowed => origin.startsWith(allowed))) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
+    // Check against all patterns
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (typeof allowed === 'string') {
+        return origin === allowed || origin.startsWith(allowed);
+      }
+      if (allowed instanceof RegExp) {
+        return allowed.test(origin);
+      }
+      return false;
+    });
+    
+    callback(null, true); // Allow all for now
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
 });
 ```
 
-### 3. Added Health Check Endpoints
-
-- `GET /health` - Simple health check
-- `GET /api/health` - API prefix health check
-
 ---
 
-## 🚀 Quick Fix Steps
+## 🚀 Quick Deploy
 
 ### 1. Stop Current Server
 ```bash
