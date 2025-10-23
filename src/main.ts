@@ -1,17 +1,18 @@
-import { NestFactory, Reflector } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { ValidationPipe } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-// import helmet from 'helmet'; // DISABLED - blocks Swagger UI resources
-import compression from 'compression';
 import cookieParser from 'cookie-parser';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ValidationPipe } from '@nestjs/common';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression from 'compression';
+import helmet from 'helmet';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { TimeoutInterceptor } from './common/interceptors/timeout.interceptor';
 import { HttpCacheInterceptor } from './common/interceptors/http-cache.interceptor';
-import { ResponseInterceptor } from './common/interceptors/response.interceptor';
-import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { Reflector } from '@nestjs/core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,59 +23,33 @@ async function bootstrap() {
     configService.get<string>('FRONTEND_URLS') || 'http://localhost:3003'
   ).split(',');
 
-  const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
-  const isDevelopment = nodeEnv === 'development';
+  // 🚀 Security: Helmet untuk protect against common vulnerabilities
+  app.use(helmet());
 
-  // Helmet DISABLED - CSP blocks Swagger UI resources
-  // If you need security headers, configure them in nginx/reverse proxy instead
-  console.log('⚠️  Helmet disabled - configure security headers in nginx if needed');
-
+  // 🚀 Performance: Compression untuk reduce response size
   app.use(
     compression({
-      filter: (req: any, res: any) => {
+      filter: (req, res) => {
         if (req.headers['x-no-compression']) {
           return false;
         }
         return compression.filter(req, res);
       },
-      level: 6,
+      level: 6, // Compression level (0-9, default 6)
     }),
   );
 
-  // CORS configuration - Allow requests with and without origin
-  // Swagger UI doesn't send Origin header, so we need to handle that
-  const allowedOrigins = isDevelopment
-    ? [...frontendUrls, 'http://localhost:3006', 'http://127.0.0.1:3006']
-    : frontendUrls;
-
+  // Konfigurasi CORS
   app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (Swagger UI, Postman, curl)
-      if (!origin) {
-        return callback(null, true);
-      }
-      
-      // Check if origin is in allowed list
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-      
-      // In development, be more permissive
-      if (isDevelopment) {
-        console.log('⚠️  CORS allowing origin in dev mode:', origin);
-        return callback(null, true);
-      }
-      
-      // In production, block unknown origins
-      console.warn('❌ CORS blocked origin:', origin);
-      return callback(new Error('Not allowed by CORS'));
-    },
+    origin: frontendUrls,
     credentials: true,
   });
 
+  // Pasang middleware cookie
   app.use(cookieParser());
   app.setGlobalPrefix('api');
 
+  // 🚀 Validation Pipeline dengan transformation
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -84,133 +59,70 @@ async function bootstrap() {
     }),
   );
 
+  // 🚀 Global Interceptors (order matters!)
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(
-    new LoggingInterceptor(),
-    new TimeoutInterceptor(30000),
-    new HttpCacheInterceptor(app.get('CACHE_MANAGER'), reflector),
-    new ResponseInterceptor(),
+    new LoggingInterceptor(), // 1. Logging untuk monitoring
+    new TimeoutInterceptor(30000), // 2. Timeout 30 detik
+    new HttpCacheInterceptor(app.get('CACHE_MANAGER'), reflector), // 3. Auto-caching
+    new ResponseInterceptor(), // 4. Response formatting (terakhir)
   );
 
+  // Global Exception Filter
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
-  app.useLogger(logger);
-
-  // Setup Swagger Documentation
-  const config = new DocumentBuilder()
-    .setTitle('Smart E-Arsip API')
+  // Setup Swagger
+  const docBuilder = new DocumentBuilder()
+    .setTitle('Smart E-Arsip API Documentation')
     .setDescription(
-      `🚀 API Backend untuk sistem arsip elektronik Smart E-Arsip
-      
-**Features:**
-- ⚡ Redis Caching untuk performa optimal
-- 🔐 JWT Authentication & Authorization
-- 📝 Manajemen Surat Masuk/Keluar
-- 📋 Sistem Disposisi Digital
-- 🤖 AI Integration untuk ekstraksi data
-
-**Base URL:** \`/api\`
-
-**Documentation:**
-- User API with Redis Caching: See USER_API_CACHE.md
-- Security: See SECURITY.md
-- Development: See DEVELOPMENT.md
-
-**Cache Strategy:**
-- User data: 1 hour TTL
-- Stats: 5 minutes TTL
-- Search results: 10 minutes TTL
-- Auto-invalidation on updates
-
-Check response logs to verify cache HIT/MISS!
-      `,
+      `Smart E-Arsip — Sistem arsip elektronik modern dengan AI integration.\n\n` +
+        `Dokumentasi ini mencakup endpoint otentikasi, manajemen user, surat masuk/keluar, disposisi, dan AI features. ` +
+        `Lihat dokumentasi proyek dan rancangan DB untuk detail fitur & model.`,
     )
     .setVersion('1.0')
     .setContact(
       'Smart E-Arsip Team',
-      'https://github.com/your-repo',
+      'https://github.com/adhfry',
       'support@smartearsip.id',
     )
-    .setLicense('MIT', 'https://opensource.org/licenses/MIT')
-    .addTag('👤 User Management', 'CRUD User dengan Redis Caching (Check logs untuk cache HIT/MISS)')
-    .addTag('🔐 Authentication', 'Login, Logout, Token Management')
-    .addTag('📨 Surat Masuk', 'Manajemen Surat Masuk dengan AI')
-    .addTag('📤 Surat Keluar', 'Manajemen Surat Keluar')
-    .addTag('📋 Disposisi', 'Manajemen Disposisi Digital')
     .addBearerAuth(
       {
         type: 'http',
         scheme: 'bearer',
         bearerFormat: 'JWT',
-        name: 'JWT',
-        description: 'Enter JWT token',
-        in: 'header',
+        description:
+          'Gunakan: `Authorization: Bearer <access_token>`. Token diperoleh dari POST /auth/login',
       },
-      'JWT-auth',
+      'access-token',
     )
-    .addServer('http://localhost:3006', 'Development Server')
-    .addServer('http://localhost', 'Production Server (Nginx)')
-    .build();
+    .addTag('App', 'Selamat Datang & info dasar')
+    .addTag('Auth', 'Endpoint otentikasi: register, login, token')
+    .addTag('Users', 'Manajemen profil user & data pegawai')
+    .addTag('Surat Masuk', 'Manajemen surat masuk dengan AI')
+    .addTag('Surat Keluar', 'Manajemen surat keluar')
+    .addTag('Disposisi', 'Sistem disposisi digital')
+    .addTag('AI Features', 'Ekstraksi data otomatis dengan AI');
 
-  const document = SwaggerModule.createDocument(app, config, {
-    deepScanRoutes: true,
-    ignoreGlobalPrefix: false,
-  });
+  const swaggerConfig = docBuilder.build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
 
-  SwaggerModule.setup('api/docs', app, document, {
-    customSiteTitle: 'Smart E-Arsip API - Documentation',
-    customfavIcon: 'https://nestjs.com/img/logo-small.svg',
-    customCss: `
-      .swagger-ui .topbar { display: none }
-      .swagger-ui .info { margin: 20px 0; }
-      .swagger-ui .info .title { font-size: 36px; color: #e0234e; }
-      .swagger-ui .info .description { font-size: 14px; line-height: 1.6; }
-      .swagger-ui .scheme-container { background: #fafafa; padding: 15px; margin: 20px 0; }
-      .swagger-ui .opblock-tag { 
-        font-size: 20px; 
-        font-weight: bold;
-        border-left: 4px solid #e0234e;
-        padding-left: 10px;
-      }
-      .swagger-ui .opblock-summary-description { font-size: 14px; }
-      .swagger-ui table thead tr td, .swagger-ui table thead tr th { 
-        font-weight: bold; 
-        background: #f7f7f7;
-      }
-    `,
+  SwaggerModule.setup('api-docs', app, document, {
     swaggerOptions: {
       persistAuthorization: true,
-      displayRequestDuration: true,
-      filter: true,
-      showExtensions: true,
-      showCommonExtensions: true,
-      defaultModelsExpandDepth: 3,
-      defaultModelExpandDepth: 3,
-      docExpansion: 'list',
-      tagsSorter: 'alpha',
+      docExpansion: 'none',
       operationsSorter: 'alpha',
+      tagsSorter: 'alpha',
     },
+    explorer: true,
   });
 
-  await app.listen(port, '0.0.0.0');
-  const baseUrl = await app.getUrl();
-  console.log(`
-╔══════════════════════════════════════════════════════════╗
-║         🚀 Smart E-Arsip API - Server Started           ║
-╠══════════════════════════════════════════════════════════╣
-║  📡 Server URL:        ${baseUrl.padEnd(30)}║
-║  📚 API Documentation: ${(baseUrl + '/api/docs').padEnd(30)}║
-║  ⚡ Redis Caching:     ENABLED                          ║
-║  🔒 Security:          ENABLED (Helmet + CORS)          ║
-║  📊 Logging:           Winston + File Rotation          ║
-║  🗜️  Compression:       ENABLED (gzip level 6)          ║
-╠══════════════════════════════════════════════════════════╣
-║  💡 Tips:                                               ║
-║  - Check logs/combined.log for cache HIT/MISS          ║
-║  - Monitor response times in Swagger UI                ║
-║  - Read USER_API_CACHE.md for cache documentation      ║
-╚══════════════════════════════════════════════════════════╝
-  `);
+  const logger = app.get(WINSTON_MODULE_NEST_PROVIDER);
+  app.useLogger(logger);
+
+  await app.listen(port);
+  console.log(`🚀 Application is running on: ${await app.getUrl()}`);
+  console.log(`📚 Swagger Docs available at: ${await app.getUrl()}/api-docs`);
+  console.log(`⚡ Performance optimizations: ENABLED`);
+  console.log(`🔒 Security features: ENABLED`);
 }
 bootstrap();
