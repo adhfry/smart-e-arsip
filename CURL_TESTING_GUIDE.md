@@ -9,7 +9,7 @@ Panduan lengkap untuk testing API Smart E-Arsip menggunakan cURL dengan authenti
 ### 1. Login untuk Mendapatkan Token
 
 ```bash
-curl -X POST http://localhost:3005/api/auth/login \
+curl -X POST http://localhost:3006/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "username": "ahda.admin",
@@ -39,7 +39,7 @@ curl -X POST http://localhost:3005/api/auth/login \
 **Bash/Linux/Mac:**
 ```bash
 # Otomatis extract token
-TOKEN=$(curl -s -X POST http://localhost:3005/api/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:3006/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"ahda.admin","password":"Password123!"}' \
   | jq -r '.access_token')
@@ -50,7 +50,7 @@ echo "Token: $TOKEN"
 **PowerShell/Windows:**
 ```powershell
 # Login dan extract token
-$response = Invoke-RestMethod -Uri "http://localhost:3005/api/auth/login" `
+$response = Invoke-RestMethod -Uri "http://localhost:3006/api/auth/login" `
   -Method POST `
   -ContentType "application/json" `
   -Body '{"username":"ahda.admin","password":"Password123!"}'
@@ -66,14 +66,14 @@ Write-Host "Token: $TOKEN"
 ### GET All Users (dengan token)
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users' \
+curl -X GET 'http://localhost:3006/api/users' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **atau manual:**
 ```bash
-curl -X GET 'http://localhost:3005/api/users' \
+curl -X GET 'http://localhost:3006/api/users' \
   -H "accept: application/json" \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
@@ -82,21 +82,21 @@ curl -X GET 'http://localhost:3005/api/users' \
 
 **Filter by active users:**
 ```bash
-curl -X GET 'http://localhost:3005/api/users?isActive=true' \
+curl -X GET 'http://localhost:3006/api/users?isActive=true' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Filter by role:**
 ```bash
-curl -X GET 'http://localhost:3005/api/users?role=admin' \
+curl -X GET 'http://localhost:3006/api/users?role=admin' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 **Filter kombinasi:**
 ```bash
-curl -X GET 'http://localhost:3005/api/users?role=staf_bidang&isActive=true' \
+curl -X GET 'http://localhost:3006/api/users?role=staf_bidang&isActive=true' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -104,7 +104,7 @@ curl -X GET 'http://localhost:3005/api/users?role=staf_bidang&isActive=true' \
 ### GET User by ID
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users/1' \
+curl -X GET 'http://localhost:3006/api/users/1' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -112,7 +112,7 @@ curl -X GET 'http://localhost:3005/api/users/1' \
 ### GET User Statistics
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users/stats' \
+curl -X GET 'http://localhost:3006/api/users/stats' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -120,7 +120,7 @@ curl -X GET 'http://localhost:3005/api/users/stats' \
 ### Search Users
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users/search?q=ahmad' \
+curl -X GET 'http://localhost:3006/api/users/search?q=ahmad' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -128,7 +128,7 @@ curl -X GET 'http://localhost:3005/api/users/search?q=ahmad' \
 ### GET Users by Role
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users/by-role/staf_bidang' \
+curl -X GET 'http://localhost:3006/api/users/by-role/staf_bidang' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -136,7 +136,7 @@ curl -X GET 'http://localhost:3005/api/users/by-role/staf_bidang' \
 ### Create User (POST)
 
 ```bash
-curl -X POST 'http://localhost:3005/api/users' \
+curl -X POST 'http://localhost:3006/api/users' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -153,7 +153,7 @@ curl -X POST 'http://localhost:3005/api/users' \
 ### Update User (PATCH)
 
 ```bash
-curl -X PATCH 'http://localhost:3005/api/users/1' \
+curl -X PATCH 'http://localhost:3006/api/users/1' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -165,7 +165,7 @@ curl -X PATCH 'http://localhost:3005/api/users/1' \
 ### Change Password
 
 ```bash
-curl -X PATCH 'http://localhost:3005/api/users/1/change-password' \
+curl -X PATCH 'http://localhost:3006/api/users/1/change-password' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -178,7 +178,7 @@ curl -X PATCH 'http://localhost:3005/api/users/1/change-password' \
 ### Toggle Active Status
 
 ```bash
-curl -X PATCH 'http://localhost:3005/api/users/1/toggle-active' \
+curl -X PATCH 'http://localhost:3006/api/users/1/toggle-active' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -186,7 +186,7 @@ curl -X PATCH 'http://localhost:3005/api/users/1/toggle-active' \
 ### Delete User
 
 ```bash
-curl -X DELETE 'http://localhost:3005/api/users/1' \
+curl -X DELETE 'http://localhost:3006/api/users/1' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -198,7 +198,7 @@ curl -X DELETE 'http://localhost:3005/api/users/1' \
 ### Register New User
 
 ```bash
-curl -X POST 'http://localhost:3005/api/auth/register' \
+curl -X POST 'http://localhost:3006/api/auth/register' \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -213,7 +213,7 @@ curl -X POST 'http://localhost:3005/api/auth/register' \
 ### Get Current User Info
 
 ```bash
-curl -X GET 'http://localhost:3005/api/auth/me' \
+curl -X GET 'http://localhost:3006/api/auth/me' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -221,7 +221,7 @@ curl -X GET 'http://localhost:3005/api/auth/me' \
 ### Get Active Session
 
 ```bash
-curl -X GET 'http://localhost:3005/api/auth/session' \
+curl -X GET 'http://localhost:3006/api/auth/session' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -229,7 +229,7 @@ curl -X GET 'http://localhost:3005/api/auth/session' \
 ### Refresh Token
 
 ```bash
-curl -X POST 'http://localhost:3005/api/auth/refresh' \
+curl -X POST 'http://localhost:3006/api/auth/refresh' \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d "{
@@ -240,7 +240,7 @@ curl -X POST 'http://localhost:3005/api/auth/refresh' \
 ### Logout
 
 ```bash
-curl -X POST 'http://localhost:3005/api/auth/logout' \
+curl -X POST 'http://localhost:3006/api/auth/logout' \
   -H "accept: application/json" \
   -H "Authorization: Bearer $TOKEN"
 ```
@@ -256,7 +256,7 @@ Simpan sebagai `test-api.sh`:
 ```bash
 #!/bin/bash
 
-BASE_URL="http://localhost:3005/api"
+BASE_URL="http://localhost:3006/api"
 
 echo "🔐 Step 1: Login..."
 RESPONSE=$(curl -s -X POST "$BASE_URL/auth/login" \
@@ -309,7 +309,7 @@ chmod +x test-api.sh
 Simpan sebagai `test-api.ps1`:
 
 ```powershell
-$BASE_URL = "http://localhost:3005/api"
+$BASE_URL = "http://localhost:3006/api"
 
 Write-Host "🔐 Step 1: Login..." -ForegroundColor Cyan
 $loginResponse = Invoke-RestMethod -Uri "$BASE_URL/auth/login" `
@@ -367,7 +367,7 @@ Write-Host "`n✅ All tests completed!" -ForegroundColor Green
 
 **Problem:**
 ```bash
-curl -X GET 'http://localhost:3005/api/users' \
+curl -X GET 'http://localhost:3006/api/users' \
   -H "accept: application/json"
 ```
 
@@ -381,7 +381,7 @@ curl -X GET 'http://localhost:3005/api/users' \
 
 **Solution:** Tambahkan header Authorization!
 ```bash
-curl -X GET 'http://localhost:3005/api/users' \
+curl -X GET 'http://localhost:3006/api/users' \
   -H "accept: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN"
 ```
@@ -399,13 +399,13 @@ curl -X GET 'http://localhost:3005/api/users' \
 **Solution:** Login ulang atau refresh token:
 ```bash
 # Option 1: Login ulang
-TOKEN=$(curl -s -X POST http://localhost:3005/api/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:3006/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"ahda.admin","password":"Password123!"}' \
   | jq -r '.access_token')
 
 # Option 2: Refresh token
-curl -X POST 'http://localhost:3005/api/auth/refresh' \
+curl -X POST 'http://localhost:3006/api/auth/refresh' \
   -H "Content-Type: application/json" \
   -d "{\"refresh_token\": \"$REFRESH_TOKEN\"}"
 ```
@@ -433,7 +433,7 @@ curl -X POST 'http://localhost:3005/api/auth/refresh' \
 ```bash
 #!/bin/bash
 
-TOKEN=$(curl -s -X POST http://localhost:3005/api/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:3006/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"ahda.admin","password":"Password123!"}' \
   | jq -r '.access_token')
@@ -442,17 +442,17 @@ echo "🧪 Testing Cache Performance..."
 echo ""
 
 echo "1️⃣ First Request (Cache MISS - dari database):"
-time curl -s -X GET "http://localhost:3005/api/users/1" \
+time curl -s -X GET "http://localhost:3006/api/users/1" \
   -H "Authorization: Bearer $TOKEN" > /dev/null
 
 echo ""
 echo "2️⃣ Second Request (Cache HIT - dari Redis):"
-time curl -s -X GET "http://localhost:3005/api/users/1" \
+time curl -s -X GET "http://localhost:3006/api/users/1" \
   -H "Authorization: Bearer $TOKEN" > /dev/null
 
 echo ""
 echo "3️⃣ Third Request (Cache HIT - dari Redis):"
-time curl -s -X GET "http://localhost:3005/api/users/1" \
+time curl -s -X GET "http://localhost:3006/api/users/1" \
   -H "Authorization: Bearer $TOKEN" > /dev/null
 
 echo ""
@@ -466,14 +466,14 @@ echo "✅ Check server logs untuk lihat Cache HIT/MISS!"
 ### 1. Pretty Print JSON dengan jq
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users' \
+curl -X GET 'http://localhost:3006/api/users' \
   -H "Authorization: Bearer $TOKEN" | jq
 ```
 
 ### 2. Save Response to File
 
 ```bash
-curl -X GET 'http://localhost:3005/api/users' \
+curl -X GET 'http://localhost:3006/api/users' \
   -H "Authorization: Bearer $TOKEN" \
   -o users.json
 
@@ -483,21 +483,21 @@ cat users.json | jq
 ### 3. Show Response Headers
 
 ```bash
-curl -i -X GET 'http://localhost:3005/api/users' \
+curl -i -X GET 'http://localhost:3006/api/users' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 4. Verbose Mode (Debug)
 
 ```bash
-curl -v -X GET 'http://localhost:3005/api/users' \
+curl -v -X GET 'http://localhost:3006/api/users' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
 ### 5. Silent Mode
 
 ```bash
-curl -s -X GET 'http://localhost:3005/api/users' \
+curl -s -X GET 'http://localhost:3006/api/users' \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -508,19 +508,19 @@ curl -s -X GET 'http://localhost:3005/api/users' \
 ### Login & Save Token (One-liner)
 ```bash
 # Bash
-TOKEN=$(curl -s -X POST http://localhost:3005/api/auth/login -H "Content-Type: application/json" -d '{"username":"ahda.admin","password":"Password123!"}' | jq -r '.access_token')
+TOKEN=$(curl -s -X POST http://localhost:3006/api/auth/login -H "Content-Type: application/json" -d '{"username":"ahda.admin","password":"Password123!"}' | jq -r '.access_token')
 
 # PowerShell
-$TOKEN = (Invoke-RestMethod -Uri "http://localhost:3005/api/auth/login" -Method POST -ContentType "application/json" -Body '{"username":"ahda.admin","password":"Password123!"}').access_token
+$TOKEN = (Invoke-RestMethod -Uri "http://localhost:3006/api/auth/login" -Method POST -ContentType "application/json" -Body '{"username":"ahda.admin","password":"Password123!"}').access_token
 ```
 
 ### Test Authenticated Endpoint
 ```bash
 # Bash
-curl -X GET "http://localhost:3005/api/users" -H "Authorization: Bearer $TOKEN"
+curl -X GET "http://localhost:3006/api/users" -H "Authorization: Bearer $TOKEN"
 
 # PowerShell
-Invoke-RestMethod -Uri "http://localhost:3005/api/users" -Headers @{ Authorization = "Bearer $TOKEN" }
+Invoke-RestMethod -Uri "http://localhost:3006/api/users" -Headers @{ Authorization = "Bearer $TOKEN" }
 ```
 
 ---

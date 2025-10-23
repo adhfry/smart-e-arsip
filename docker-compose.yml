@@ -71,9 +71,9 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_change_this}
       JWT_SECRET: ${JWT_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
-      APP_PORT: ${APP_PORT:-3005}
+      APP_PORT: ${APP_PORT:-3006}
     ports:
-      - "${APP_PORT:-3005}:${APP_PORT:-3005}"
+      - "${APP_PORT:-3006}:${APP_PORT:-3006}"
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
@@ -85,7 +85,7 @@ services:
     networks:
       - smart-arsip-network
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-3005}/api"]
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-3006}/api"]
       interval: 30s
       timeout: 10s
       retries: 3

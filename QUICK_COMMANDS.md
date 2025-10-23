@@ -29,7 +29,7 @@ redis-cli MONITOR
 ## Swagger UI
 
 ```
-http://localhost:3005/api/docs
+http://localhost:3006/api/docs
 ```
 
 ## Redis Commands
@@ -80,19 +80,19 @@ npx prisma db seed
 
 # Get all users
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users
+  http://localhost:3006/api/users
 
 # Get user by ID
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users/1
+  http://localhost:3006/api/users/1
 
 # Get user statistics
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users/stats
+  http://localhost:3006/api/users/stats
 
 # Search users
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  "http://localhost:3005/api/users/search?q=ahmad"
+  "http://localhost:3006/api/users/search?q=ahmad"
 
 # Create user
 curl -X POST \
@@ -106,14 +106,14 @@ curl -X POST \
     "password": "Password123!",
     "role": "staf_tu"
   }' \
-  http://localhost:3005/api/users
+  http://localhost:3006/api/users
 
 # Update user
 curl -X PATCH \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"nama_lengkap": "Updated Name"}' \
-  http://localhost:3005/api/users/1
+  http://localhost:3006/api/users/1
 
 # Change password
 curl -X PATCH \
@@ -123,17 +123,17 @@ curl -X PATCH \
     "oldPassword": "Password123!",
     "newPassword": "NewPassword456!"
   }' \
-  http://localhost:3005/api/users/1/change-password
+  http://localhost:3006/api/users/1/change-password
 
 # Toggle active status
 curl -X PATCH \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users/1/toggle-active
+  http://localhost:3006/api/users/1/toggle-active
 
 # Delete user
 curl -X DELETE \
   -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users/1
+  http://localhost:3006/api/users/1
 ```
 
 ## Performance Testing
@@ -141,11 +141,11 @@ curl -X DELETE \
 ```bash
 # Test response time (first request - cache miss)
 time curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users/1
+  http://localhost:3006/api/users/1
 
 # Test response time (second request - cache hit)
 time curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users/1
+  http://localhost:3006/api/users/1
 
 # Compare the times - second should be ~10x faster!
 ```
@@ -231,7 +231,7 @@ cat .env | grep -E "DATABASE_URL|REDIS_HOST|REDIS_PORT|APP_PORT"
 
 ```bash
 # API health
-curl http://localhost:3005/api/health
+curl http://localhost:3006/api/health
 
 # Redis health
 redis-cli ping
@@ -266,7 +266,7 @@ Save as `test.sh`:
 ```bash
 #!/bin/bash
 TOKEN="your_jwt_token_here"
-BASE="http://localhost:3005/api"
+BASE="http://localhost:3006/api"
 
 echo "Testing User API with Cache..."
 echo ""
@@ -320,7 +320,7 @@ npm run build
 
 ## Documentation Quick Links
 
-- Swagger UI: http://localhost:3005/api/docs
+- Swagger UI: http://localhost:3006/api/docs
 - USER_API_CACHE.md - Complete API documentation
 - TESTING_GUIDE.md - Testing instructions
 - IMPLEMENTATION_COMPLETE.md - Implementation summary

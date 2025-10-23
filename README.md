@@ -73,7 +73,7 @@ See [SEEDER_GUIDE.md](./SEEDER_GUIDE.md) for complete details.
 ```bash
 npm run start:dev
 ```
-API akan berjalan di `http://localhost:3005` dengan hot reload aktif.
+API akan berjalan di `http://localhost:3006` dengan hot reload aktif.
 
 ### Production (Dengan Docker)
 
@@ -103,12 +103,12 @@ docker-compose logs -f api
 docker-compose --profile with-nginx up -d
 ```
 
-API akan berjalan di `http://localhost:3005` atau via Nginx di `http://localhost`
+API akan berjalan di `http://localhost:3006` atau via Nginx di `http://localhost`
 
 ## 📚 Documentation
 
 ### API Documentation
-- **Swagger UI**: `http://localhost:3005/api/docs` - Interactive API testing
+- **Swagger UI**: `http://localhost:3006/api/docs` - Interactive API testing
 - [User API Documentation](./USER_API_CACHE.md) - Complete guide dengan Redis caching
 - [User API (Original)](./USER_API.md) - Original user API docs
 - [Testing Guide](./TESTING_GUIDE.md) - Step-by-step testing cache behavior
@@ -127,7 +127,7 @@ API akan berjalan di `http://localhost:3005` atau via Nginx di `http://localhost
 ## 🧪 Testing Cache Performance
 
 ### Method 1: Swagger UI (Recommended)
-1. Go to `http://localhost:3005/api/docs`
+1. Go to `http://localhost:3006/api/docs`
 2. Authorize with Bearer token
 3. Test `GET /users/1` twice
 4. Compare response times:
@@ -137,10 +137,10 @@ API akan berjalan di `http://localhost:3005` atau via Nginx di `http://localhost
 ### Method 2: cURL
 ```bash
 # First request (Cache MISS)
-time curl -H "Authorization: Bearer TOKEN" http://localhost:3005/api/users/1
+time curl -H "Authorization: Bearer TOKEN" http://localhost:3006/api/users/1
 
 # Second request (Cache HIT - much faster!)
-time curl -H "Authorization: Bearer TOKEN" http://localhost:3005/api/users/1
+time curl -H "Authorization: Bearer TOKEN" http://localhost:3006/api/users/1
 ```
 
 ### Method 3: Watch Logs

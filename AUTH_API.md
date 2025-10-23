@@ -7,7 +7,7 @@ Sistem autentikasi lengkap dengan JWT tokens, Redis session management, dan toke
 ## 🚀 Base URL
 
 ```
-http://localhost:3005/api/auth
+http://localhost:3006/api/auth
 ```
 
 ## ⚡ Redis-Powered Features
@@ -125,7 +125,7 @@ Logout dan invalidate session.
 
 **Example:**
 ```bash
-curl -X POST http://localhost:3005/api/auth/logout \
+curl -X POST http://localhost:3006/api/auth/logout \
   -H "Authorization: Bearer YOUR_ACCESS_TOKEN"
 ```
 

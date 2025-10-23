@@ -1,0 +1,72 @@
+name: Deploy NestJS Smart E-Arsip API to VPS
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    deploy:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout Repository
+              uses: actions/checkout@v4
+
+            - name: Setup SSH
+              uses: webfactory/ssh-agent@v0.9.0
+              with:
+                  ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY_SMARTEARSIP  }}
+
+            - name: Deploy to VPS
+              env:
+                  COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+                  VPS_USER: ${{ secrets.VPS_USER_SMARTEARSIP }}
+                  VPS_HOST: ${{ secrets.VPS_HOST_SMARTEARSIP }}
+                  VPS_PATH: ${{ secrets.VPS_PATH_SMARTEARSIP }}
+                  GIT_REPO: ${{ secrets.GIT_REPO }}
+              run: |
+                  echo "🧩 Commit message: $COMMIT_MESSAGE"
+
+                  ssh -o StrictHostKeyChecking=no $VPS_USER@$VPS_HOST << EOF
+                    set -e
+
+                    echo "📂 Masuk ke direktori proyek..."
+                    cd $VPS_PATH || exit 1
+
+                    if [ ! -d .git ]; then
+                      echo "🚀 Repository belum di-clone, melakukan clone pertama kali..."
+                      git clone git@github-smartearsip:adhfry/smart-e-arsip.git .
+                    fi
+
+                    echo "🔄 Fetching update dari remote..."
+                    git fetch origin main
+                    git reset --hard origin/main
+
+                    # echo "📦 Menginstal dependensi..."
+                    # npm ci --omit=dev
+
+                    echo "📦 Menginstal nest cli..."
+                    npm install -g @nestjs/cli 
+
+                    echo "📦 Menginstal type declarations..."
+                    npm install @types/bcrypt --save-dev
+
+
+                    echo "🏗️ Membangun project..."
+                    npm run build
+
+                    echo "🗄️ Menjalankan migrasi database..."
+                    npx prisma migrate deploy
+
+                    if echo "$COMMIT_MESSAGE" | grep -q -- "--seed"; then
+                      echo "🌱 Menjalankan seeder..."
+                      ls
+                      ls dist/prisma
+                      node dist/prisma/seed.js
+                    fi
+
+                    echo "♻️ Restart PM2..."
+                    pm2 restart api-smart-ea || pm2 start dist/main.js --name api-smart-ea
+                    pm2 save
+                  EOF

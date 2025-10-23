@@ -112,7 +112,7 @@ After successful seeding, you'll see:
 
 ### Using Swagger UI
 
-1. Go to: `http://localhost:3005/api/docs`
+1. Go to: `http://localhost:3006/api/docs`
 2. Find **POST /api/auth/login** endpoint
 3. Click "Try it out"
 4. Test with any user:
@@ -153,14 +153,14 @@ After successful seeding, you'll see:
 
 ```bash
 # Login as Admin
-curl -X POST http://localhost:3005/api/auth/login \
+curl -X POST http://localhost:3006/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"ahda.admin","password":"Password123!"}'
 
 # Copy the access_token from response
 # Use it for authenticated requests:
 curl -H "Authorization: Bearer YOUR_TOKEN" \
-  http://localhost:3005/api/users
+  http://localhost:3006/api/users
 ```
 
 ---
@@ -214,7 +214,7 @@ To change passwords after seeding:
 
 ### Option 1: Through API
 ```bash
-curl -X PATCH http://localhost:3005/api/users/1/change-password \
+curl -X PATCH http://localhost:3006/api/users/1/change-password \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -287,14 +287,14 @@ Navigate to `users` table and verify all 7 users exist.
 ### Using API (requires login)
 ```bash
 # Login first
-TOKEN=$(curl -s -X POST http://localhost:3005/api/auth/login \
+TOKEN=$(curl -s -X POST http://localhost:3006/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"ahda.admin","password":"Password123!"}' \
   | jq -r '.access_token')
 
 # Get all users
 curl -H "Authorization: Bearer $TOKEN" \
-  http://localhost:3005/api/users
+  http://localhost:3006/api/users
 ```
 
 ### Using MySQL CLI
@@ -335,7 +335,7 @@ Expected output:
 
 3. **Open Swagger**:
    ```
-   http://localhost:3005/api/docs
+   http://localhost:3006/api/docs
    ```
 
 4. **Login as Admin**:

@@ -20,8 +20,8 @@ npm run start:dev
 ╔══════════════════════════════════════════════════════════╗
 ║         🚀 Smart E-Arsip API - Server Started           ║
 ╠══════════════════════════════════════════════════════════╣
-║  📡 Server URL:        http://localhost:3005            ║
-║  📚 API Documentation: http://localhost:3005/api/docs   ║
+║  📡 Server URL:        http://localhost:3006            ║
+║  📚 API Documentation: http://localhost:3006/api/docs   ║
 ║  ⚡ Redis Caching:     ENABLED                          ║
 ║  🔒 Security:          ENABLED (Helmet + CORS)          ║
 ╚══════════════════════════════════════════════════════════╝
@@ -31,7 +31,7 @@ npm run start:dev
 
 ### 2️⃣ Open Swagger UI
 
-Navigate to: **http://localhost:3005/api/docs**
+Navigate to: **http://localhost:3006/api/docs**
 
 You should see:
 - 👤 User Management section with 10 endpoints
@@ -265,7 +265,7 @@ Request → Redis Cache (5-10ms) → Response
 #!/bin/bash
 
 TOKEN="YOUR_JWT_TOKEN"
-BASE_URL="http://localhost:3005/api"
+BASE_URL="http://localhost:3006/api"
 
 echo "🧪 Testing Cache Performance..."
 echo ""
@@ -419,7 +419,7 @@ tail -f logs/combined.log | grep -E "Cache|UserService"
 ## 🚀 Ready to Test!
 
 1. Start server: `npm run start:dev`
-2. Open: http://localhost:3005/api/docs
+2. Open: http://localhost:3006/api/docs
 3. Login & authorize
 4. Test endpoints
 5. Watch logs for cache HIT/MISS

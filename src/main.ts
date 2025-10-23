@@ -16,13 +16,26 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('APP_PORT') || 3005;
+  const port = configService.get<number>('APP_PORT') || 3006;
 
   const frontendUrls = (
-    configService.get<string>('FRONTEND_URLS') || 'http://localhost:3002'
+    configService.get<string>('FRONTEND_URLS') || 'http://localhost:3003'
   ).split(',');
 
-  app.use(helmet());
+  // Helmet configuration - disable CSP for Swagger UI
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'", ...frontendUrls, 'http://localhost:3006'],
+        },
+      },
+    }),
+  );
 
   app.use(
     compression({
@@ -118,7 +131,7 @@ Check response logs to verify cache HIT/MISS!
       },
       'JWT-auth',
     )
-    .addServer('http://localhost:3005', 'Development Server')
+    .addServer('http://localhost:3006', 'Development Server')
     .addServer('http://localhost', 'Production Server (Nginx)')
     .build();
 
