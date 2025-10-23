@@ -42,11 +42,13 @@ export class AuthService {
   private readonly REFRESH_TOKEN_PREFIX = 'refresh_token:';
   private readonly SESSION_PREFIX = 'session:';
   private readonly BLACKLIST_PREFIX = 'blacklist:';
+  private readonly USER_CREDENTIALS_PREFIX = 'user_credentials:';
   
   // Token expiration times
   private readonly ACCESS_TOKEN_EXPIRY = '15m'; // 15 minutes
   private readonly REFRESH_TOKEN_EXPIRY = '7d'; // 7 days
   private readonly REFRESH_TOKEN_TTL = 7 * 24 * 60 * 60; // 7 days in seconds
+  private readonly USER_CREDENTIALS_TTL = 30 * 60; // 30 minutes - cache user for faster login
 
   constructor(
     private prisma: PrismaService,
@@ -103,11 +105,29 @@ export class AuthService {
   }
 
   async login(username: string, password: string): Promise<LoginResponse> {
-    // Find user
-    const user = await this.userService.findByUsername(username);
+    // ⚡ Try to get user from cache first
+    let user: any = await this.cacheManager.get(
+      `${this.USER_CREDENTIALS_PREFIX}${username}`,
+    );
     
     if (!user) {
-      throw new UnauthorizedException('Username atau password salah');
+      // 🔍 Cache miss - fetch from database
+      user = await this.userService.findByUsername(username);
+      
+      if (!user) {
+        throw new UnauthorizedException('Username atau password salah');
+      }
+
+      // 💾 Cache user credentials for next login (30 minutes)
+      await this.cacheManager.set(
+        `${this.USER_CREDENTIALS_PREFIX}${username}`,
+        user,
+        this.USER_CREDENTIALS_TTL,
+      );
+      
+      this.logger.debug(`User credentials cached: ${username}`);
+    } else {
+      this.logger.debug(`⚡ User credentials from cache: ${username}`);
     }
 
     // Check if user is active
@@ -130,6 +150,12 @@ export class AuthService {
 
   async logout(userId: number, token: string): Promise<void> {
     try {
+      // Get user to clear username cache
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true },
+      });
+
       // Decode token to get expiration
       const decoded = this.jwtService.decode(token) as JwtPayload;
       
@@ -151,6 +177,12 @@ export class AuthService {
       
       // Remove session
       await this.cacheManager.del(`${this.SESSION_PREFIX}${userId}`);
+      
+      // 🗑️ Remove cached user credentials
+      if (user) {
+        await this.cacheManager.del(`${this.USER_CREDENTIALS_PREFIX}${user.username}`);
+        this.logger.debug(`User credentials cache cleared: ${user.username}`);
+      }
 
       this.logger.log(`User logged out: ID ${userId}`);
     } catch (error) {
@@ -274,12 +306,31 @@ export class AuthService {
   }
 
   async revokeAllSessions(userId: number): Promise<void> {
+    // Get user to clear username cache
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+
     // Remove refresh token
     await this.cacheManager.del(`${this.REFRESH_TOKEN_PREFIX}${userId}`);
     
     // Remove session
     await this.cacheManager.del(`${this.SESSION_PREFIX}${userId}`);
     
+    // 🗑️ Remove cached user credentials
+    if (user) {
+      await this.cacheManager.del(`${this.USER_CREDENTIALS_PREFIX}${user.username}`);
+    }
+    
     this.logger.log(`All sessions revoked for user ID: ${userId}`);
+  }
+
+  /**
+   * Clear cached user credentials (call this when user data changes)
+   */
+  async clearUserCache(username: string): Promise<void> {
+    await this.cacheManager.del(`${this.USER_CREDENTIALS_PREFIX}${username}`);
+    this.logger.debug(`User credentials cache cleared: ${username}`);
   }
 }

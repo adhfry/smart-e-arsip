@@ -21,6 +21,7 @@ export class UserService {
   private readonly logger = new Logger(UserService.name);
   private readonly CACHE_PREFIX = 'user:';
   private readonly CACHE_LIST_PREFIX = 'users:list:';
+  private readonly USER_CREDENTIALS_PREFIX = 'user_credentials:'; // ⚡ For auth cache
   private readonly CACHE_TTL = 3600; // 1 jam dalam detik
 
   constructor(
@@ -215,6 +216,7 @@ export class UserService {
     // Invalidate cache setelah update
     await this.invalidateUserCache(id);
     await this.invalidateListCache();
+    await this.invalidateAuthCache(updatedUser.username); // ⚡ Clear auth cache
     this.logger.log(`User updated: ${updatedUser.username} (ID: ${id})`);
 
     return updatedUser;
@@ -243,6 +245,8 @@ export class UserService {
       data: { password: hashedPassword },
     });
 
+    // ⚡ Clear auth cache after password change
+    await this.invalidateAuthCache(user.username);
     this.logger.log(`Password changed for user: ${user.username} (ID: ${id})`);
   }
 
@@ -269,19 +273,21 @@ export class UserService {
     // Invalidate cache setelah toggle
     await this.invalidateUserCache(id);
     await this.invalidateListCache();
+    await this.invalidateAuthCache(updatedUser.username); // ⚡ Clear auth cache
     this.logger.log(`User status toggled: ${updatedUser.username} (ID: ${id}) - Active: ${updatedUser.isActive}`);
 
     return updatedUser;
   }
 
   async remove(id: number): Promise<void> {
-    await this.findOne(id);
+    const user = await this.findOne(id);
 
     await this.prisma.user.delete({ where: { id } });
 
     // Invalidate cache setelah delete
     await this.invalidateUserCache(id);
     await this.invalidateListCache();
+    await this.invalidateAuthCache(user.username); // ⚡ Clear auth cache
     this.logger.log(`User deleted: ID ${id}`);
   }
 
@@ -290,6 +296,12 @@ export class UserService {
     const cacheKey = `${this.CACHE_PREFIX}${id}`;
     await this.cacheManager.del(cacheKey);
     this.logger.debug(`Invalidated cache: ${cacheKey}`);
+  }
+
+  private async invalidateAuthCache(username: string): Promise<void> {
+    const cacheKey = `${this.USER_CREDENTIALS_PREFIX}${username}`;
+    await this.cacheManager.del(cacheKey);
+    this.logger.debug(`⚡ Invalidated auth cache: ${cacheKey}`);
   }
 
   private async invalidateListCache(): Promise<void> {
