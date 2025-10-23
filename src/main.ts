@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
-import helmet from 'helmet';
+// import helmet from 'helmet'; // DISABLED - blocks Swagger UI resources
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
@@ -24,11 +24,10 @@ async function bootstrap() {
 
   const nodeEnv = configService.get<string>('NODE_ENV') || 'development';
   const isDevelopment = nodeEnv === 'development';
-  const appUrl = configService.get<string>('APP_URL') || `http://localhost:${port}`;
 
-  // Helmet configuration - permissive for Swagger in all environments
-  // For production Swagger, we need to allow connectSrc to API itself
-  app.use(helmet());
+  // Helmet DISABLED - CSP blocks Swagger UI resources
+  // If you need security headers, configure them in nginx/reverse proxy instead
+  console.log('⚠️  Helmet disabled - configure security headers in nginx if needed');
 
   app.use(
     compression({
