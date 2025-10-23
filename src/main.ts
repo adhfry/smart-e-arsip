@@ -23,10 +23,7 @@ async function bootstrap() {
     configService.get<string>('FRONTEND_URLS') || 'http://localhost:3003'
   ).split(',');
 
-  // 🚀 Security: Helmet untuk protect against common vulnerabilities
-  app.use(helmet());
-
-  // 🚀 Performance: Compression untuk reduce response size
+  // 🚀 Performance: Compression untuk reduce response size (TANPA HELMET!)
   app.use(
     compression({
       filter: (req, res) => {

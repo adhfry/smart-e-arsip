@@ -3,12 +3,10 @@ import {
   NotFoundException,
   ConflictException,
   BadRequestException,
-  Inject,
   Logger,
 } from '@nestjs/common';
-import { CACHE_MANAGER } from '@nestjs/cache-manager';
-import type { Cache } from 'cache-manager';
 import { PrismaService } from '../prisma/prisma.service';
+import { CacheService } from '../common/services/cache.service';
 import { User, Role } from '@prisma/client';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -19,14 +17,14 @@ type UserWithoutPassword = Omit<User, 'password'>;
 @Injectable()
 export class UserService {
   private readonly logger = new Logger(UserService.name);
-  private readonly CACHE_PREFIX = 'user:';
-  private readonly CACHE_LIST_PREFIX = 'users:list:';
-  private readonly USER_CREDENTIALS_PREFIX = 'user_credentials:'; // ⚡ For auth cache
-  private readonly CACHE_TTL = 3600; // 1 jam dalam detik
+  
+  // 🚀 ULTRA-FAST CACHE KEYS & TTL
+  private readonly CACHE_PREFIX = 'users:';
+  private readonly CACHE_TTL = 0; // 0 = unlimited (manual invalidation untuk kecepatan maksimal!)
 
   constructor(
     private prisma: PrismaService,
-    @Inject(CACHE_MANAGER) private cacheManager: Cache,
+    private cacheService: CacheService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -74,97 +72,74 @@ export class UserService {
     });
 
     // Invalidate cache list setelah create
-    await this.invalidateListCache();
+    await this.cacheService.invalidatePattern(`${this.CACHE_PREFIX}*`);
     this.logger.log(`User created: ${user.username} (ID: ${user.id})`);
 
     return user;
   }
 
   async findAll(role?: Role, isActive?: boolean): Promise<UserWithoutPassword[]> {
-    // Generate cache key berdasarkan filter
-    const cacheKey = `${this.CACHE_LIST_PREFIX}${role || 'all'}:${isActive !== undefined ? isActive : 'all'}`;
+    const cacheKey = `${this.CACHE_PREFIX}list:${role || 'all'}:${isActive ?? 'all'}`;
 
-    // Cek cache terlebih dahulu
-    const cached = await this.cacheManager.get<UserWithoutPassword[]>(cacheKey);
-    if (cached) {
-      this.logger.debug(`Cache HIT for users list: ${cacheKey}`);
-      return cached;
-    }
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const where: any = {};
+        
+        if (role) where.role = role;
+        if (isActive !== undefined) where.isActive = isActive;
 
-    this.logger.debug(`Cache MISS for users list: ${cacheKey}`);
-
-    const where: any = {};
-    
-    if (role) {
-      where.role = role;
-    }
-    
-    if (isActive !== undefined) {
-      where.isActive = isActive;
-    }
-
-    const users = await this.prisma.user.findMany({
-      where,
-      select: {
-        id: true,
-        nama_lengkap: true,
-        username: true,
-        email: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        password: false,
+        return this.prisma.user.findMany({
+          where,
+          select: {
+            id: true,
+            nama_lengkap: true,
+            username: true,
+            email: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+            password: false,
+          },
+          orderBy: { createdAt: 'desc' },
+        }) as Promise<UserWithoutPassword[]>;
       },
-      orderBy: { createdAt: 'desc' },
-    }) as UserWithoutPassword[];
-
-    // Simpan ke cache
-    await this.cacheManager.set(cacheKey, users, this.CACHE_TTL);
-    this.logger.debug(`Cached users list: ${cacheKey}`);
-
-    return users;
+      this.CACHE_TTL,
+    );
   }
 
   async findOne(id: number): Promise<UserWithoutPassword> {
-    // Generate cache key untuk user individual
     const cacheKey = `${this.CACHE_PREFIX}${id}`;
 
-    // Cek cache terlebih dahulu
-    const cached = await this.cacheManager.get<UserWithoutPassword>(cacheKey);
-    if (cached) {
-      this.logger.debug(`Cache HIT for user: ${cacheKey}`);
-      return cached;
-    }
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const user = await this.prisma.user.findUnique({
+          where: { id },
+          select: {
+            id: true,
+            nama_lengkap: true,
+            username: true,
+            email: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+            password: false,
+          },
+        });
 
-    this.logger.debug(`Cache MISS for user: ${cacheKey}`);
+        if (!user) {
+          throw new NotFoundException(`User dengan ID ${id} tidak ditemukan`);
+        }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        nama_lengkap: true,
-        username: true,
-        email: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        password: false,
+        return user as UserWithoutPassword;
       },
-    });
-
-    if (!user) {
-      throw new NotFoundException(`User dengan ID ${id} tidak ditemukan`);
-    }
-
-    // Simpan ke cache
-    await this.cacheManager.set(cacheKey, user, this.CACHE_TTL);
-    this.logger.debug(`Cached user: ${cacheKey}`);
-
-    return user as UserWithoutPassword;
+      this.CACHE_TTL,
+    );
   }
 
   async findByUsername(username: string): Promise<User | null> {
@@ -213,10 +188,8 @@ export class UserService {
       },
     }) as UserWithoutPassword;
 
-    // Invalidate cache setelah update
-    await this.invalidateUserCache(id);
-    await this.invalidateListCache();
-    await this.invalidateAuthCache(updatedUser.username); // ⚡ Clear auth cache
+    // Invalidate ALL user cache setelah update
+    await this.cacheService.invalidatePattern(`${this.CACHE_PREFIX}*`);
     this.logger.log(`User updated: ${updatedUser.username} (ID: ${id})`);
 
     return updatedUser;
@@ -245,8 +218,8 @@ export class UserService {
       data: { password: hashedPassword },
     });
 
-    // ⚡ Clear auth cache after password change
-    await this.invalidateAuthCache(user.username);
+    // ⚡ Clear ALL user cache after password change
+    await this.cacheService.invalidatePattern(`${this.CACHE_PREFIX}*`);
     this.logger.log(`Password changed for user: ${user.username} (ID: ${id})`);
   }
 
@@ -270,10 +243,8 @@ export class UserService {
       },
     }) as UserWithoutPassword;
 
-    // Invalidate cache setelah toggle
-    await this.invalidateUserCache(id);
-    await this.invalidateListCache();
-    await this.invalidateAuthCache(updatedUser.username); // ⚡ Clear auth cache
+    // Invalidate ALL user cache setelah toggle
+    await this.cacheService.invalidatePattern(`${this.CACHE_PREFIX}*`);
     this.logger.log(`User status toggled: ${updatedUser.username} (ID: ${id}) - Active: ${updatedUser.isActive}`);
 
     return updatedUser;
@@ -284,49 +255,9 @@ export class UserService {
 
     await this.prisma.user.delete({ where: { id } });
 
-    // Invalidate cache setelah delete
-    await this.invalidateUserCache(id);
-    await this.invalidateListCache();
-    await this.invalidateAuthCache(user.username); // ⚡ Clear auth cache
+    // Invalidate ALL user cache setelah delete
+    await this.cacheService.invalidatePattern(`${this.CACHE_PREFIX}*`);
     this.logger.log(`User deleted: ID ${id}`);
-  }
-
-  // Helper methods untuk cache invalidation
-  private async invalidateUserCache(id: number): Promise<void> {
-    const cacheKey = `${this.CACHE_PREFIX}${id}`;
-    await this.cacheManager.del(cacheKey);
-    this.logger.debug(`Invalidated cache: ${cacheKey}`);
-  }
-
-  private async invalidateAuthCache(username: string): Promise<void> {
-    const cacheKey = `${this.USER_CREDENTIALS_PREFIX}${username}`;
-    await this.cacheManager.del(cacheKey);
-    this.logger.debug(`⚡ Invalidated auth cache: ${cacheKey}`);
-  }
-
-  private async invalidateListCache(): Promise<void> {
-    // Invalidate semua cache list dengan pattern
-    const keys = await this.getCacheKeys(`${this.CACHE_LIST_PREFIX}*`);
-    for (const key of keys) {
-      await this.cacheManager.del(key);
-      this.logger.debug(`Invalidated cache: ${key}`);
-    }
-  }
-
-  private async getCacheKeys(pattern: string): Promise<string[]> {
-    // Simple implementation - in production, use Redis SCAN
-    const keys: string[] = [];
-    // For cache-manager-redis-store, we need to get all possible combinations
-    const roles = ['all', 'admin', 'staf_tu', 'pimpinan', 'staf_bidang'];
-    const activeStatus = ['all', 'true', 'false'];
-    
-    for (const role of roles) {
-      for (const status of activeStatus) {
-        keys.push(`${this.CACHE_LIST_PREFIX}${role}:${status}`);
-      }
-    }
-    
-    return keys;
   }
 
   // Method untuk statistik users
@@ -336,41 +267,33 @@ export class UserService {
     active: number;
     inactive: number;
   }> {
-    const cacheKey = 'user:stats';
-    
-    // Cek cache
-    const cached = await this.cacheManager.get<any>(cacheKey);
-    if (cached) {
-      this.logger.debug(`Cache HIT for user stats`);
-      return cached;
-    }
+    const cacheKey = `${this.CACHE_PREFIX}stats`;
 
-    this.logger.debug(`Cache MISS for user stats`);
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        const [total, active, inactive, byRole] = await Promise.all([
+          this.prisma.user.count(),
+          this.prisma.user.count({ where: { isActive: true } }),
+          this.prisma.user.count({ where: { isActive: false } }),
+          this.prisma.user.groupBy({
+            by: ['role'],
+            _count: { role: true },
+          }),
+        ]);
 
-    const [total, active, inactive, byRole] = await Promise.all([
-      this.prisma.user.count(),
-      this.prisma.user.count({ where: { isActive: true } }),
-      this.prisma.user.count({ where: { isActive: false } }),
-      this.prisma.user.groupBy({
-        by: ['role'],
-        _count: { role: true },
-      }),
-    ]);
-
-    const stats = {
-      total,
-      active,
-      inactive,
-      byRole: byRole.reduce((acc, item) => {
-        acc[item.role] = item._count.role;
-        return acc;
-      }, {} as Record<Role, number>),
-    };
-
-    // Cache untuk 5 menit
-    await this.cacheManager.set(cacheKey, stats, 300);
-    
-    return stats;
+        return {
+          total,
+          active,
+          inactive,
+          byRole: byRole.reduce((acc, item) => {
+            acc[item.role] = item._count.role;
+            return acc;
+          }, {} as Record<Role, number>),
+        };
+      },
+      this.CACHE_TTL,
+    );
   }
 
   // Method untuk mendapatkan user berdasarkan role
@@ -380,44 +303,36 @@ export class UserService {
 
   // Method untuk search users
   async searchUsers(searchTerm: string): Promise<UserWithoutPassword[]> {
-    const cacheKey = `user:search:${searchTerm.toLowerCase()}`;
-    
-    // Cek cache
-    const cached = await this.cacheManager.get<UserWithoutPassword[]>(cacheKey);
-    if (cached) {
-      this.logger.debug(`Cache HIT for user search: ${searchTerm}`);
-      return cached;
-    }
+    const cacheKey = `${this.CACHE_PREFIX}search:${searchTerm.toLowerCase()}`;
 
-    this.logger.debug(`Cache MISS for user search: ${searchTerm}`);
-
-    const users = await this.prisma.user.findMany({
-      where: {
-        OR: [
-          { nama_lengkap: { contains: searchTerm } },
-          { username: { contains: searchTerm } },
-          { email: { contains: searchTerm } },
-          { phone: { contains: searchTerm } },
-        ],
+    return this.cacheService.getOrSet(
+      cacheKey,
+      async () => {
+        return this.prisma.user.findMany({
+          where: {
+            OR: [
+              { nama_lengkap: { contains: searchTerm } },
+              { username: { contains: searchTerm } },
+              { email: { contains: searchTerm } },
+              { phone: { contains: searchTerm } },
+            ],
+          },
+          select: {
+            id: true,
+            nama_lengkap: true,
+            username: true,
+            email: true,
+            phone: true,
+            role: true,
+            isActive: true,
+            createdAt: true,
+            updatedAt: true,
+            password: false,
+          },
+          orderBy: { nama_lengkap: 'asc' },
+        }) as Promise<UserWithoutPassword[]>;
       },
-      select: {
-        id: true,
-        nama_lengkap: true,
-        username: true,
-        email: true,
-        phone: true,
-        role: true,
-        isActive: true,
-        createdAt: true,
-        updatedAt: true,
-        password: false,
-      },
-      orderBy: { nama_lengkap: 'asc' },
-    }) as UserWithoutPassword[];
-
-    // Cache hasil search untuk 10 menit
-    await this.cacheManager.set(cacheKey, users, 600);
-    
-    return users;
+      this.CACHE_TTL,
+    );
   }
 }

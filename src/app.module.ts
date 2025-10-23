@@ -13,6 +13,7 @@ import { DisposisiModule } from './disposisi/disposisi.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { WinstonModule } from 'nest-winston';
 import { winstonConfig } from './common/config/winston.config';
+import { CommonModule } from './common/common.module';
 
 @Module({
   imports: [
@@ -30,11 +31,16 @@ import { winstonConfig } from './common/config/winston.config';
         host: configService.get<string>('REDIS_HOST', 'localhost'),
         port: configService.get<number>('REDIS_PORT', 6379),
         password: configService.get<string>('REDIS_PASSWORD'),
-        ttl: configService.get<number>('CACHE_TTL', 300),
-        max: configService.get<number>('REDIS_MAX_CONNECTIONS', 10),
+        ttl: 0, // Default: unlimited (manual invalidation)
+        max: 10000, // Max items in cache
         db: configService.get<number>('REDIS_DB', 0),
+        // Performance tuning
+        socket_keepalive: true,
+        retry_strategy: () => 1000,
+        enable_offline_queue: false,
       }),
     }),
+    CommonModule,
     PrismaModule,
     AuthModule,
     UserModule,
