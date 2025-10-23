@@ -1,0 +1,121 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// [cite: 80-85]
+model User {
+  id             Int         @id @default(autoincrement())
+  nama_lengkap   String      @db.VarChar(100)
+  username       String      @unique @db.VarChar(50)
+  email          String?     @unique @db.VarChar(100)
+  phone          String?     @unique @db.VarChar(15)
+  password       String      @db.VarChar(255)
+  role           Role
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  
+  // Relasi
+  suratMasukDicatat   SuratMasuk[] @relation("PencatatSuratMasuk")
+  suratKeluarDibuat   SuratKeluar[] @relation("PembuatSuratKeluar")
+  disposisiDiberikan  Disposisi[]  @relation("PemberiDisposisi")
+  disposisiDiterima   Disposisi[]  @relation("PenerimaDisposisi")
+
+  @@map("users")
+}
+
+// [cite: 86-97]
+model SuratMasuk {
+  id                Int       @id @default(autoincrement())
+  no_surat_asal     String    @db.VarChar(100)
+  tgl_surat         DateTime  @db.Date
+  tgl_diterima      DateTime  @default(now())
+  perihal           String    @db.Text
+  asal_surat        String    @db.VarChar(150)
+  file_url          String    @db.VarChar(255)
+  
+  // Kunci Asing untuk pencatat (Staf TU) [cite: 93]
+  id_pencatat_user  Int
+  pencatat          User      @relation("PencatatSuratMasuk", fields: [id_pencatat_user], references: [id])
+  
+  // Fitur AI [cite: 94-97]
+  ringkasan_ai      String?   @db.Text
+  adalah_undangan   Boolean   @default(false)
+  detail_rapat_json String?   @db.Text // Menyimpan JSON sebagai string
+  
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  
+  // Relasi
+  disposisi         Disposisi? // Relasi 1-1 
+
+  @@map("surat_masuk")
+}
+
+// [cite: 98-105]
+model SuratKeluar {
+  id                Int      @id @default(autoincrement())
+  no_surat_keluar   String   @unique @db.VarChar(100)
+  tgl_surat         DateTime @db.Date
+  perihal           String   @db.Text
+  tujuan            String   @db.VarChar(150)
+  file_url          String   @db.VarChar(255)
+
+  // Kunci Asing untuk pembuat (Staf TU) [cite: 104]
+  id_pembuat_user   Int
+  pembuat           User     @relation("PembuatSuratKeluar", fields: [id_pembuat_user], references: [id])
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@map("surat_keluar")
+}
+
+// [cite: 106-113]
+model Disposisi {
+  id             Int             @id @default(autoincrement())
+  
+  // Kunci Asing ke Surat Masuk (Relasi 1-1) [cite: 109]
+  id_surat_masuk Int             @unique // @unique menegakkan relasi 1-1
+  surat          SuratMasuk      @relation(fields: [id_surat_masuk], references: [id])
+  
+  // Kunci Asing ke Pimpinan (Pemberi) [cite: 109]
+  id_pimpinan_user Int
+  pimpinan         User            @relation("PemberiDisposisi", fields: [id_pimpinan_user], references: [id])
+  
+  // Kunci Asing ke Staf Bidang (Penerima) [cite: 110]
+  id_tujuan_user Int
+  tujuan           User            @relation("PenerimaDisposisi", fields: [id_tujuan_user], references: [id])
+  
+  instruksi      String          @db.Text
+  tgl_disposisi  DateTime        @default(now())
+  status         StatusDisposisi @default(Menunggu)
+  
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@map("disposisi")
+}
+
+// Enum untuk Role Pengguna 
+enum Role {
+  admin
+  staf_tu
+  pimpinan
+  staf_bidang
+}
+
+// Enum untuk Status Disposisi 
+enum StatusDisposisi {
+  Menunggu
+  Dikerjakan
+  Selesai
+}

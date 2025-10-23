@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+  # MySQL Database dengan optimasi
+  mysql:
+    image: mysql:8.0
+    container_name: smart-arsip-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_password_change_this}
+      MYSQL_DATABASE: smart_e_arsip
+      MYSQL_USER: ${DB_USER:-app_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-app_password_change_this}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./mysql-config/my.cnf:/etc/mysql/conf.d/my.cnf
+    command: >
+      --default-authentication-plugin=mysql_native_password
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --max_connections=200
+      --innodb_buffer_pool_size=1G
+      --innodb_log_file_size=256M
+      --innodb_flush_log_at_trx_commit=2
+      --query_cache_type=1
+      --query_cache_size=64M
+    networks:
+      - smart-arsip-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Redis Cache dengan optimasi
+  redis:
+    image: redis:7-alpine
+    container_name: smart-arsip-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redis_password_change_this}
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - smart-arsip-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # NestJS API Application
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smart-arsip-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: mysql://${DB_USER:-app_user}:${DB_PASSWORD:-app_password_change_this}@mysql:3306/smart_e_arsip?connection_limit=10&pool_timeout=10
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_password_change_this}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      APP_PORT: ${APP_PORT:-3005}
+    ports:
+      - "${APP_PORT:-3005}:${APP_PORT:-3005}"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - smart-arsip-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT:-3005}/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy (Optional)
+  nginx:
+    image: nginx:alpine
+    container_name: smart-arsip-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - api
+    networks:
+      - smart-arsip-network
+    profiles:
+      - with-nginx
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  smart-arsip-network:
+    driver: bridge
